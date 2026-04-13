@@ -3,39 +3,37 @@
 <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <title>CleanTek 會議室預約</title>
+    <title>CleanTek Room Booking</title>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 15px; background-color: #f9f9f9; }
-        h3 { color: #0078d4; font-size: 18px; margin-bottom: 10px; border-bottom: 2px solid #0078d4; padding-bottom: 5px; }
-        .room { padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #ddd; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .busy { border-left: 6px solid #d13438; color: #a4262c; }
-        .free { border-left: 6px solid #107c10; color: #107c10; cursor: pointer; }
-        .free:hover { background: #f0f9f1; transform: translateY(-1px); }
-        .status-text { font-size: 12px; margin-top: 4px; color: #666; }
-        #debug { font-size: 10px; color: #999; margin-top: 20px; text-align: center; }
-        .btn-refresh { background: #0078d4; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-bottom: 10px; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 15px; background-color: #f3f2f1; }
+        h3 { color: #0078d4; font-size: 16px; border-bottom: 2px solid #0078d4; padding-bottom: 5px; }
+        .room { padding: 12px; margin: 8px 0; border-radius: 4px; border: 1px solid #ddd; background: #fff; position: relative; }
+        .busy { border-left: 5px solid #d13438; color: #a4262c; }
+        .free { border-left: 5px solid #107c10; color: #107c10; cursor: pointer; }
+        .free:hover { background: #f0f9f1; }
+        #list { margin-top: 15px; }
+        #debug { font-size: 10px; color: #888; margin-top: 30px; text-align: center; }
+        .loading { text-align: center; color: #666; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h3>CleanTek 會議室</h3>
-    <button class="btn-refresh" onclick="updateStatus()">手動重新整理</button>
-    <div id="list">正在連線至 Google 系統...</div>
-    <div id="debug">等待 Outlook 初始化...</div>
+    <h3>CleanTek 會議室狀態</h3>
+    <div id="list" class="loading">正在確認時間...</div>
+    <div id="debug">初始化中...</div>
 
     <script>
-        // 您的專屬 GAS URL
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbzR4VMuwVDy0Cbn_q9fgHIQUxcP0YFwJg00SL6jiuGg2PlxWfIBua_IB-KKHLHW_a_l/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzjZ-JU0HeJwbvRurk1WbimU_jXBugi061hcnaP1dmJpgJ0_NldqAUXCXMlirTwHjNG/exec";
 
         Office.onReady((info) => {
             if (info.host === Office.HostType.Outlook) {
-                document.getElementById('debug').innerText = "Outlook 環境已就緒";
+                document.getElementById('debug').innerText = "Outlook 已連線";
+                // 進入循環檢查
+                setInterval(updateStatus, 4000);
                 updateStatus();
-                // 每 5 秒自動偵測一次 Outlook 時間變化
-                setInterval(updateStatus, 5000);
             } else {
-                document.getElementById('list').innerHTML = "請在 Outlook 會議視窗中開啟此 Add-in";
-                document.getElementById('debug').innerText = "非 Outlook 環境";
+                document.getElementById('list').innerHTML = "請於 Outlook 會議視窗中開啟";
+                document.getElementById('debug').innerText = "外部瀏覽器模式";
             }
         });
 
@@ -43,54 +41,46 @@
             Office.context.mailbox.item.start.getAsync((s) => {
                 Office.context.mailbox.item.end.getAsync((e) => {
                     if (!s.value || !e.value) {
-                        document.getElementById('list').innerHTML = "請先設定會議時間";
+                        document.getElementById('list').innerHTML = "請先設定會議起迄時間";
                         return;
                     }
-
                     const start = s.value.toISOString();
                     const end = e.value.toISOString();
-                    const checkUrl = `${GAS_URL}?action=check&start=${start}&end=${end}`;
+                    const url = `${GAS_URL}?action=check&start=${start}&end=${end}`;
 
-                    fetch(checkUrl)
+                    fetch(url)
                         .then(r => r.json())
                         .then(rooms => {
                             const html = rooms.map(r => `
                                 <div class="room ${r.is_busy ? 'busy' : 'free'}" onclick="${r.is_busy ? '' : `book('${r.name}')`}">
                                     <strong>${r.name}</strong><br>
-                                    <span class="status-text">${r.is_busy ? '❌ 此時段已被預訂' : '✅ 點擊即可預選此會議室'}</span>
+                                    <small>${r.is_busy ? '❌ 已被佔用' : '✅ 點擊預約'}</small>
                                 </div>
                             `).join('');
                             document.getElementById('list').innerHTML = html;
-                            document.getElementById('debug').innerText = "最後更新：" + new Date().toLocaleTimeString();
                         })
-                        .catch(err => {
-                            document.getElementById('list').innerHTML = "連線失敗，請檢查 Google Script 部署權限是否設為『所有人』。";
+                        .catch(() => {
+                            document.getElementById('list').innerHTML = "無法讀取資料，請檢查網路。";
                         });
                 });
             });
         }
 
         function book(roomName) {
+            if (!confirm("確定要預約 " + roomName + " 嗎？")) return;
+            
             Office.context.mailbox.item.start.getAsync(s => {
                 Office.context.mailbox.item.end.getAsync(e => {
-                    const data = {
-                        room: roomName,
-                        start: s.value.toISOString(),
-                        end: e.value.toISOString(),
-                        user: Office.context.mailbox.userProfile.emailAddress
-                    };
+                    const user = Office.context.mailbox.userProfile.emailAddress;
+                    const bookUrl = `${GAS_URL}?action=book&room=${encodeURIComponent(roomName)}&start=${s.value.toISOString()}&end=${e.value.toISOString()}&user=${encodeURIComponent(user)}`;
                     
-                    document.getElementById('list').innerHTML = "正在寫入預約資料...";
+                    document.getElementById('list').innerHTML = "正在預約中...";
                     
-                    // 使用 GET 傳送預約請求以避免跨域問題
-                    const bookUrl = `${GAS_URL}?action=book&room=${encodeURIComponent(data.room)}&start=${data.start}&end=${data.end}&user=${encodeURIComponent(data.user)}`;
-                    
-                    fetch(bookUrl, { method: 'GET' })
-                        .then(() => {
-                            alert(roomName + " 預約成功！");
-                            Office.context.mailbox.item.location.setAsync(roomName);
-                            updateStatus();
-                        });
+                    fetch(bookUrl).then(() => {
+                        alert("預約成功！");
+                        Office.context.mailbox.item.location.setAsync(roomName);
+                        updateStatus();
+                    });
                 });
             });
         }
