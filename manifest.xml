@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 針對 CleanTek 會議室管理應用的 Outlook Add-in 設定檔 -->
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" 
+           xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0" 
+           xsi:type="MailApp">
+  
+  <!-- 這是唯一識別碼 (GUID)，不可與其他 App 重複 -->
+  <Id>6f28b7e2-b123-4a2b-8a1e-c7f8a9d0b1c2</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>CleanTek</ProviderName>
+  <DefaultLocale>zh-TW</DefaultLocale>
+  
+  <!-- 在 Outlook 中顯示的名稱 -->
+  <DisplayName DefaultValue="CleanTek 會議室管理"/>
+  <Description DefaultValue="即時查看會議室狀態並預約，資料同步至 Google Sheets。"/>
+  
+  <!-- 圖示：若您有圖檔可更換網址，目前使用預設佔位圖 -->
+  <IconUrl DefaultValue="https://cleantekcr01.github.io/outlook-cr-app/icon.png"/>
+
+  <SupportUrl DefaultValue="https://github.com/cleantekcr01/outlook-cr-app"/>
+
+  <!-- 權限設定：需要讀取/寫入郵件項目（為了設定地點與讀取時間） -->
+  <Permissions>ReadWriteItem</Permissions>
+
+  <Hosts>
+    <Host Name="Mailbox" />
+  </Hosts>
+
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.1" />
+    </Sets>
+  </Requirements>
+
+  <!-- 設定在什麼情況下顯示這個 App -->
+  <FormSettings>
+    <ItemEdit>
+      <!-- Appointment 代表在撰寫「會議/行事曆」時顯示 -->
+      <ItemType>Appointment</ItemType>
+      <DesktopSettings>
+        <!-- 指向您在 GitHub Pages 上的網頁 -->
+        <SourceLocation DefaultValue="https://cleantekcr01.github.io/outlook-cr-app/"/>
+      </DesktopSettings>
+    </ItemEdit>
+  </FormSettings>
+
+  <!-- 為了允許網頁與 Google Script 通訊，需將網域加入白名單 -->
+  <AppDomains>
+    <AppDomain>https://cleantekcr01.github.io</AppDomain>
+    <AppDomain>https://script.google.com</AppDomain>
+    <AppDomain>https://script.googleusercontent.com</AppDomain>
+  </AppDomains>
+
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Appointment" FormType="Edit" />
+  </Rule>
+
+  <DisableEntityHighlighting>false</DisableEntityHighlighting>
+
+</OfficeApp>
